@@ -1,0 +1,71 @@
+/* Flashcard.css */
+
+.flashcard {
+  /* width: 200px; */
+  /* height: 300px; */
+  perspective: 1000px;
+  transition: transform 0.5s;
+  cursor: pointer;
+}
+
+.flashcard.flipped {
+  transform: rotateY(180deg);
+}
+
+.content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  background-color: #fff; /* Default background color */
+}
+
+.back {
+  background-color: #f0f0f0;
+  transform: rotateY(180deg);
+}
+
+.flip-button {
+  display: flex;
+  align-items: center;
+  margin-top: 16px;
+  background-color: #1890ff;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: background-color 0.3s;
+  transform: rotateY(180deg); /* Add this rule to flip the button */
+}
+
+.flip-button:hover {
+  background-color: #096dd9;
+}
+
+/* Apply a transformation to flip only the text when the card is flipped */
+.flip-button .button-text {
+  transform: rotateY(180deg);
+}
+
+/* Reset the transformation when the card is flipped */
+.flashcard.flipped .flip-button .button-text {
+  transform: none; /* Add this rule to reset the text */
+}
+
+/* Add some CSS rules for the delete-icon div */
+.delete-icon {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  color: #ff4d4f;
+}
+
+/* Add some CSS rules for the delete-icon div when the card is flipped */
+.flashcard.flipped .delete-icon {
+  transform: rotateY(180deg); /* Flip the icon horizontally */
+  right: auto;
+  left: 8px;
+}
