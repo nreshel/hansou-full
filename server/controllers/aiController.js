@@ -1,6 +1,12 @@
 const asyncHandler = require("express-async-handler");
 const OpenAI = require('openai');
 const dotenv = require('dotenv');
+const puppeteer = require('puppeteer');
+const puppeteerExtra = require('puppeteer-extra');
+const Stealth = require('puppeteer-extra-plugin-stealth');
+const bodyParser = require('body-parser');
+const getImageColors = require('get-image-colors');
+const userAgent = require('user-agents');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -101,14 +107,6 @@ const processAiMessages = asyncHandler(async (req, res) => {
   }
 });
 
-const puppeteer = require('puppeteer');
-const puppeteerExtra = require('puppeteer-extra');
-const Stealth = require('puppeteer-extra-plugin-stealth');
-const bodyParser = require('body-parser');
-const getImageColors = require('get-image-colors');
-const userAgent = require('user-agents');
-
-
 let browser;
 let page;
 
@@ -135,128 +133,27 @@ function getColorHex(colorName) {
 const startScraper = asyncHandler(async (req, res) => {
   try {
     browser = await puppeteerExtra.launch({
-      headless: false,
+      headless: 'new',
     });
 
     page = await browser.newPage();
-    await page.goto('https://talkai.info/chat/');
+    await page.goto("https://chatgptfree.ai/", { waitUntil: 'load' });
     await page.setUserAgent(userAgent.random().toString());
-    await page.waitForTimeout(2000); 
-    res.status(200).send('Script started successfully.');
-    const contentElement = await page.$('#content');
-    const contentElemenChild = await page.$('#content div');
-    console.log(contentElemenChild)
-    if(!!contentElement && !!contentElemenChild) {
-      await page.waitForSelector('#content');
-      await page.waitForSelector('#content > :first-child');
-  
-      const cssPropertiesFirstDiv = await page.evaluate(() => {
-        const contentDiv = document.querySelector('#content');
-        const firstDiv = contentDiv.querySelector('div');
-  
-        if (firstDiv) {
-          const computedStyle = window.getComputedStyle(firstDiv);
-          const cssProperties = {};
-  
-          for (const prop of computedStyle) {
-            cssProperties[prop] = computedStyle.getPropertyValue(prop);
-          }
-  
-          return cssProperties;
-        }
-  
-        return null;
-      });
-  
-      // Extract URL from background-image CSS property of the first div
-      const backgroundImageFirstDiv = cssPropertiesFirstDiv['background-image'];
-      const imageUrlFirstDiv = extractUrl(backgroundImageFirstDiv);
-  
-      // Use get-image-colors to get the color palette for the first div
-      const imageColorsFirstDiv = await getImageColors(imageUrlFirstDiv);
-  
-      console.log('Background Image URL of the first div:', imageUrlFirstDiv);
-      console.log('Image Colors of the first div:', imageColorsFirstDiv.map(color => color.hex()));
-  
-      // Loop through the tags within the third p tag
-      const tagsInThirdPTagOnclick = await page.evaluate(() => {
-        const colorRegex = /(BLACK|GREY|GRAY|RED|GREEN|BLUE|YELLOW)/i;
-  
-        // Extract color words using the regular expression
-        const thirdPTag = document.querySelector('#content > p:nth-child(3)');
-        const tags = Array.from(thirdPTag.children).map((tag, tagIndex) => {
-          console.log(tagIndex)
-          if (window.getComputedStyle(tag).getPropertyValue('display') === 'none') return;
-          const onclickAttribute = tag.getAttribute('onclick')
-          const extractedColors = onclickAttribute.match(colorRegex);
-          return {
-            color: extractedColors ? extractedColors[0] : null,
-            positionNumber: tagIndex
-          };
-        }).filter(tag => tag);
-        return tags;
-      });
-  
-      console.log(tagsInThirdPTagOnclick);
-  
-      const hexColors = tagsInThirdPTagOnclick.map(color => ({ color: getColorHex(color.color), positionNumber: color.positionNumber }));
-  
-      console.log(hexColors);
-  
-      // Find the index with the closest color using CIE76 color difference
-      const closestColor = hexColors.reduce((closest, currentColor) => {
-        const closestColorDifference = getColorDifference(closest.color, imageColorsFirstDiv[0].hex());
-        const currentColorDifference = getColorDifference(currentColor.color, imageColorsFirstDiv[0].hex());
-        return currentColorDifference < closestColorDifference ? currentColor : closest;
-      }, hexColors[0]);
-      
-      if (closestColor) {
-        console.log('Color with closest match:', closestColor);
-      
-        // Get the index of the tag in tagsInThirdPTag based on the positionNumber of the closest color match
-        const tagIndexToClick = closestColor.positionNumber;
-      
-        if (tagIndexToClick !== undefined) {
-          console.log(tagIndexToClick);
-          // Click the tag using Puppeteer
-          await page.click(`#content > p:nth-child(3) > :nth-child(${tagIndexToClick + 1})`);
-        } else {
-          console.error('Invalid tag index.');
-        }
-      } else {
-        console.error('No valid color found.');
-      }
-    }
 
-    await page.waitForSelector('div#consent-banner');
+    
+    let initialMessage = await page.evaluate(() => {
+      const messages = document.querySelectorAll('li.wpaicg-ai-message p span');
+      const lastMessage = messages[messages.length - 1];
+      return lastMessage ? lastMessage.textContent : '';
+    });
 
-    const acceptButtonSelector = 'div#consent-banner a#accept-btn';
-
-    // Wait for the accept button to be visible and clickable
-    await page.waitForSelector(acceptButtonSelector, { visible: true, clickable: true });
-
-    // Click the accept button using Puppeteer
-    await page.click(acceptButtonSelector);
-
-    console.log('Accept button clicked.');
+    res.status(200).json({ message: 'Script started successfully.', reply: initialMessage });
 
   } catch (error) {
     console.error('Error starting script:', error);
     res.status(500).send('Error starting script.');
   }
 });
-
-// Function to calculate CIE76 color difference
-function getColorDifference(color1, color2) {
-  const rgb1 = hexToRgb(color1);
-  const rgb2 = hexToRgb(color2);
-
-  const deltaR = rgb2.r - rgb1.r;
-  const deltaG = rgb2.g - rgb1.g;
-  const deltaB = rgb2.b - rgb1.b;
-
-  return Math.sqrt(deltaR * deltaR + deltaG * deltaG + deltaB * deltaB);
-}
 
 // Function to convert hex color to RGB
 function hexToRgb(hex) {
@@ -267,17 +164,12 @@ function hexToRgb(hex) {
   return { r, g, b };
 }
 
-function extractUrl(cssValue) {
-  const regex = /(?:\(['"]?)(.*?)(?:['"]?\))/;
-  const match = regex.exec(cssValue);
-  return match ? match[1] : null;
-}
-
 const communicateWithChatbot = asyncHandler(async (req, res) => {
   try {
-    const userMessage = await req.body.message;
-    const textareaSelector = 'textarea';
+    const userMessage = req.body.message;
+    const textareaSelector = '#post-6 > div > div.elementor.elementor-6 > section.elementor-section.elementor-top-section.elementor-element.elementor-element-d42cf1a.elementor-section-boxed.elementor-section-height-default.elementor-section-height-default > div > div > div > div.elementor-element.elementor-element-6d40bf7.elementor-widget.elementor-widget-shortcode > div > div > div > div.wpaicg-chat-shortcode-type > textarea';
     await page.waitForSelector(textareaSelector);
+
 
     // Type into the textarea
     await page.type(textareaSelector, userMessage);
@@ -286,12 +178,12 @@ const communicateWithChatbot = asyncHandler(async (req, res) => {
     await page.keyboard.press('Enter');
 
     const selector = 'div.chat__message.bot-message';
-    // await delay(7500); // Wait for messages to load
-
+    
+    await delay(3500);
     let initialMessage = await page.evaluate(() => {
-      const messages = document.querySelectorAll('div.chat__message.bot-message');
+      const messages = document.querySelectorAll('li.wpaicg-ai-message p span');
       const lastMessage = messages[messages.length - 1];
-      return lastMessage ? lastMessage.textContent.replace(/chatgptcopy/i, "") : '';
+      return lastMessage ? lastMessage.textContent : '';
     });
 
     console.log(initialMessage);
@@ -305,9 +197,9 @@ const communicateWithChatbot = asyncHandler(async (req, res) => {
     while(true) {
       await delay(2500); // Wait for 2500 milliseconds before checking again
       currentMessage = await page.evaluate(() => {
-        const messages = document.querySelectorAll('div.chat__message.bot-message');
+        const messages = document.querySelectorAll('li.wpaicg-ai-message p span');
         const lastMessage = messages[messages.length - 1];
-        return lastMessage ? lastMessage.textContent.replace(/chatgptcopy/i, "") : '';
+        return lastMessage ? lastMessage.textContent : '';
       });
 
 
@@ -318,56 +210,28 @@ const communicateWithChatbot = asyncHandler(async (req, res) => {
         break;
       }
       initialMessage = await page.evaluate(() => {
-        const messages = document.querySelectorAll('div.chat__message.bot-message');
+        const messages = document.querySelectorAll('li.wpaicg-ai-message p span');
         const lastMessage = messages[messages.length - 1];
         return lastMessage ? lastMessage.textContent.replace(/chatgptcopy/i, "") : '';
       });
     }
 
-    // do {
-    //   currentMessage = await page.evaluate(() => {
-    //     const messages = document.querySelectorAll('div.chat__message.bot-message');
-    //     const lastMessage = messages[messages.length - 1];
-    //     return lastMessage ? lastMessage.textContent.replace(/chatgptcopy/i, "") : '';
-    //   });
-
-    //   await delay(2500); // Wait for 2500 milliseconds before checking again
-
-    //   // Add additional logging for debugging
-    //   console.log(`Iteration ${iterations}: Current message - ${currentMessage}`);
-
-    //   if(initialMessage.length !== currentMessage.length) {
-    //     initialMessage = await page.evaluate(() => {
-    //       const messages = document.querySelectorAll('div.chat__message.bot-message');
-    //       const lastMessage = messages[messages.length - 1];
-    //       return lastMessage ? lastMessage.textContent.replace(/chatgptcopy/i, "") : '';
-    //     });
-    //     continue;
-    //   } else {
-    //     break;
-    //   }
-
-    // } while (true); // Check if initial message matches current message
-
     console.log('Final message:', currentMessage);
 
     const allMessages = await page.evaluate(() => {
-      const messages = document.querySelectorAll('div.chat__message.bot-message');
-      return Array.from(messages).map(message => message.textContent.replace(/chatgptcopy/i, ""));
+      const messages = document.querySelectorAll('li.wpaicg-ai-message p span');
+      return Array.from(messages).map(message => message.textContent);
     });
 
     console.log(allMessages);
 
-    res.status(200).json({ message: 'Message sent successfully!' });
+    res.status(200).json({ message: 'Message sent successfully!', reply: allMessages[allMessages.length - 1] });
 
   } catch(error) {
     console.error('Error occurred:', error);
     res.status(500).json({ error: 'An error occurred while communicating with the chatbot.' });
   }
 });
-
-
-
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -383,31 +247,6 @@ const endScraper = asyncHandler(async (req, res) => {
     res.status(500).send('Error exiting script.');
   }
 });
-
-// app.listen(port, () => {
-//   console.log(`Server is running on port ${port}`);
-// });
-
-// async function watchDivs() {
-//   try {
-//     while (true) {
-//       // Your logic to find and record specific divs
-//       const divs = await page.$$eval('YOUR_DIV_SELECTOR', divs => {
-//         return divs.map(div => div.innerHTML);
-//       });
-
-//       // Send divs to the client using a GET request
-//       if (divs.length > 0) {
-//         await sendDivsToClient(divs);
-//       }
-
-//       // Wait for new divs to be added to the DOM
-//       await page.waitForSelector('YOUR_NEW_DIV_SELECTOR', { timeout: 0 });
-//     }
-//   } catch (error) {
-//     console.error('Error in watchDivs:', error);
-//   }
-// }
 
 async function sendDivsToClient(divs) {
   // Your logic to send divs to the client using a GET request

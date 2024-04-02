@@ -1,16 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
-const useAsync = ({ asyncFunction, immediate = false }) => {
+const useAsync = ({ asyncFunction, immediate = false, exitFunction }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchData = async () => {
+  const fetchData = async (...params) => {
     try {
       setLoading(true);
-      const result = await asyncFunction();
+      const result = await asyncFunction(...params);
       console.log(result);
       setData(result);
+      return result;
     } catch (error) {
       setError(error);
     } finally {
@@ -21,6 +22,10 @@ const useAsync = ({ asyncFunction, immediate = false }) => {
   useEffect(() => {
     if (immediate) {
       fetchData();
+    }
+
+    if (!!exitFunction) {
+      return async () => await exitFunction();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [asyncFunction, immediate]); // Only re-run the effect if asyncFunction or immediate changes

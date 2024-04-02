@@ -1,5 +1,5 @@
 // MyContext.js
-import React, { createContext, useState } from 'react';
+import { createContext, useState } from "react";
 
 // Create a context with a default value (in this case, an empty object)
 const MyContext = createContext({});
@@ -12,9 +12,9 @@ const MyContextProvider = ({ children }) => {
     // Add any other state properties you need
   });
 
-  const updateState = newData => {
+  const updateState = (newData) => {
     // Update state logic goes here
-    setState(prevState => ({
+    setState((prevState) => ({
       ...prevState,
       data: newData,
       // Add other state updates as needed
@@ -22,11 +22,11 @@ const MyContextProvider = ({ children }) => {
   };
 
   const updateDictionarySearchData = (data) => {
-    setState(prevState => ({
+    setState((prevState) => ({
       ...prevState,
-      dictionarySearch: data
-    }))
-  }
+      dictionarySearch: data,
+    }));
+  };
 
   // Provide the context value to its children
   const contextValue = {
@@ -36,9 +36,7 @@ const MyContextProvider = ({ children }) => {
   };
 
   return (
-    <MyContext.Provider value={contextValue}>
-      {children}
-    </MyContext.Provider>
+    <MyContext.Provider value={contextValue}>{children}</MyContext.Provider>
   );
 };
 

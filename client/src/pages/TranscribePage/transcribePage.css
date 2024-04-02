@@ -1,0 +1,33 @@
+.transcribe-container {
+  padding: 20px;
+}
+
+.input-col {
+  margin-bottom: 20px;
+}
+
+.output-col {
+  display: flex;
+  justify-content: center;
+}
+
+.ant-card {
+  max-width: 600px;
+}
+
+.ant-card-meta-title {
+  font-size: 20px;
+  font-weight: bold;
+  text-align: left;
+}
+
+.ant-card-meta-description {
+  text-align: left;
+}
+
+@media screen and (min-width: 768px) {
+  .ant-card-cover {
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+  }
+}

@@ -7,31 +7,23 @@ import {
   BookOutlined,
   RobotOutlined,
   PlusOutlined,
-  UploadOutlined
+  FormOutlined
 } from '@ant-design/icons';
-import Flashcard from './components/Flashcard/Flashcard';
 import Dictionary from './components/Dictionary/Dictionary';
 import { MyContext } from './context/Context';
 import cardService from './services/cardService';
-import useAsync from './hooks/useAsync';
 import FlashcardPage from './pages/FlashcardPage';
+import AiPage from './pages/AiPage';
+import TranscribePage from './pages/TranscribePage';
 
 const { Header, Content, Footer } = Layout;
 const { Item } = Form;
 
 function App() {
-  const [count, setCount] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const { state } = useContext(MyContext);
-  
-  // const { data } = useAsync({
-  //   asyncFunction: cardService.getCards,
-  //   immediate: true
-  // })
-
-  // console.log(data);
 
   const showModal = () => {
     setIsModalVisible(true);
@@ -88,8 +80,6 @@ function App() {
   
 
   const LoginPage = () => <div>Login Page</div>;
-  const DictionaryPage = () => <div>Dictionary Page</div>;
-  const AiPage = () => <div>AI Page</div>;
 
   return (
     <>
@@ -107,6 +97,7 @@ function App() {
             <Route path="/flashcards" element={isLoggedIn ? <FlashcardPage /> : <Navigate replace to="/login" />} />
             <Route path="/dictionary" element={isLoggedIn ? <Dictionary /> : <Navigate replace to="/login" />} />
             <Route path="/ai" element={isLoggedIn ? <AiPage /> : <Navigate replace to="/login" />} />
+            <Route path="/transcribe" element={isLoggedIn ? <TranscribePage /> : <Navigate replace to="/login" />} />
             <Route path="/" element={isLoggedIn ? <Navigate replace to="/flashcards" /> : <Navigate replace to="/login" />} />
           </Routes>
           <div>
@@ -129,21 +120,12 @@ function App() {
             <Menu.Item key="ai" icon={<RobotOutlined />}>
               <Link to="/ai">AI</Link>
             </Menu.Item>
+            <Menu.Item key="transcribe" icon={<FormOutlined />}>
+              <Link to="/transcribe">Transcribe</Link>
+            </Menu.Item>
             <Menu.Item key="add" icon={<PlusOutlined />} onClick={showModal}>
               Add
             </Menu.Item>
-            {/* <Menu.Item key="upload" icon={<UploadOutlined />}>
-              <label htmlFor="fileInput" style={{ cursor: 'pointer' }}>
-                Upload File
-              </label>
-              <input
-                id="fileInput"
-                type="file"
-                accept=".apkg" // Specify the accepted file type if needed
-                style={{ display: 'none' }}
-                onChange={handleFileChange}
-              />
-            </Menu.Item> */}
           </Menu>
         </Footer>
 
